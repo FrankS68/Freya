@@ -52,6 +52,9 @@ public class MistralSearchProvider implements SearchProvider {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("model", config.getModel());
         body.put("tools", List.of(Map.of("type", "web_search")));
+        body.put("instructions",
+                "Du hast Zugriff auf das Tool web_search. Nutze es ZWINGEND zuerst, bevor du antwortest. "
+                        + "Antworte nach der Suche ausschliesslich mit dem geforderten JSON-Array, ohne Begruessung oder Begleittext.");
         body.put("inputs", buildPrompt(topic, search.getResultsPerProvider(), search.getLanguage()));
 
         String response;
@@ -76,12 +79,13 @@ public class MistralSearchProvider implements SearchProvider {
     }
 
     public static String buildPrompt(String topic, int maxResults, String language) {
-        return "Du bist ein Recherche-Assistent. Suche im Web nach aktuellen, seriösen Online-Quellen zum Thema: \""
-                + topic + "\". Finde maximal " + maxResults
-                + " unterschiedliche Artikel und nenne die passenden URLs. Antworte AUSSCHLIESSLICH mit einem "
+        return "Suche mit web_search nach aktuellen, seriösen Online-Artikeln zum Thema: \"" + topic + "\". "
+                + "Gib maximal " + maxResults + " gefundene Artikel zurueck. Antworte AUSSCHLIESSLICH mit einem "
                 + "JSON-Array aus maximal " + maxResults + " Objekten im Format "
-                + "{\"title\": \"...\", \"url\": \"...\", \"snippet\": \"...\", \"published_at\": \"YYYY-MM-DD\"}. "
-                + "Sprache der Quellen: " + language + ". Kein Text ausserhalb des JSON-Arrays.";
+                + "{\"title\": \"...\", \"url\": \"...\", \"snippet\": \"...\", \"published_at\": \"YYYY-MM-DD\"}, "
+                + "wobei jede URL ein echter, von der Suche gefundener Artikel sein muss. "
+                + "Sprache der Quellen: " + language + ". Wenn die Suche wirklich nichts findet, antworte mit [] — "
+                + "aber nutze die Suche in jedem Fall, bevor du antwortest.";
     }
 
     public static List<SearchHit> parseResponse(String body) {
