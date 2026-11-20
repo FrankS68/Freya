@@ -41,6 +41,9 @@ scout:
     read-timeout: 30s
   store:
     path: ./data/processed-items.json
+  update:
+    enabled: true
+    repo: FrankS68/Freya
 
 logging:
   level:

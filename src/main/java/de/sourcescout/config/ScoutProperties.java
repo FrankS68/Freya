@@ -17,6 +17,7 @@ public class ScoutProperties {
     private final Evaluation evaluation = new Evaluation();
     private final Portal portal = new Portal();
     private final Store store = new Store();
+    private final Update update = new Update();
 
     public Schedule getSchedule() {
         return schedule;
@@ -44,6 +45,10 @@ public class ScoutProperties {
 
     public Store getStore() {
         return store;
+    }
+
+    public Update getUpdate() {
+        return update;
     }
 
     public static class Schedule {
@@ -307,6 +312,27 @@ public class ScoutProperties {
 
         public void setPath(String path) {
             this.path = path;
+        }
+    }
+
+    public static class Update {
+        private boolean enabled = true;
+        private String repo = "FrankS68/Freya";
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public String getRepo() {
+            return repo;
+        }
+
+        public void setRepo(String repo) {
+            this.repo = repo;
         }
     }
 }

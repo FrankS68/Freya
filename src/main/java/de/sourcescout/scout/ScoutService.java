@@ -24,6 +24,7 @@ public class ScoutService {
     private static final Logger log = LoggerFactory.getLogger(ScoutService.class);
 
     private final ScoutProperties properties;
+    private final SelfUpdateService selfUpdateService;
     private final ResearchPipeline pipeline;
     private final PortalDocsService portalDocsService;
     private final QuestionResearchService questionResearchService;
@@ -31,12 +32,14 @@ public class ScoutService {
     private final ProcessedItemStore store;
 
     public ScoutService(ScoutProperties properties,
+                        SelfUpdateService selfUpdateService,
                         ResearchPipeline pipeline,
                         PortalDocsService portalDocsService,
                         QuestionResearchService questionResearchService,
                         PortalPublisher portalPublisher,
                         ProcessedItemStore store) {
         this.properties = properties;
+        this.selfUpdateService = selfUpdateService;
         this.pipeline = pipeline;
         this.portalDocsService = portalDocsService;
         this.questionResearchService = questionResearchService;
@@ -45,6 +48,14 @@ public class ScoutService {
     }
 
     public void runOnce() {
+        try {
+            if (selfUpdateService.checkAndApply()) {
+                log.info("Update installiert - dieser Lauf endet, der Dienst startet mit der neuen Version neu.");
+                return;
+            }
+        } catch (Exception ex) {
+            log.warn("Update-Pruefung fehlgeschlagen: {}", ex.getMessage());
+        }
         try {
             portalDocsService.checkForChanges()
                     .filter(DocsMapping::hasQuestionsEndpoint)

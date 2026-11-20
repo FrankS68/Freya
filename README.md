@@ -42,7 +42,11 @@ Neue Suchanbieter oder LLM-Clients: einfach `SearchProvider` bzw. `LlmClient` al
 | `scout.schedule.cron` / `run-on-startup` | – | Standard: alle 6 Stunden + einmal beim Start |
 | `scout.store.path` | – | JSON-Datei der bereits veröffentlichten Einträge |
 
-### Schnittstellen-Doku und Portal-Fragen
+### Auto-Update
+
+Standardmäßig prüft Freya bei jedem Lauf (auch beim Start), ob es ein neueres GitHub-Release gibt (`scout.update.repo`, abgefragt über `/releases/latest`). Ist die dort angehängte `freya.jar` neuer als die laufende Version, wird sie nach `/opt/freya/freya.jar` geladen, atomar ersetzt und der Dienst beendet sich selbst — systemd (`Restart=always`) startet ihn direkt mit der neuen Version. Deaktivieren mit `scout.update.enabled: false`. Bedingung: das laufende JAR muss unter `/opt/freya/` liegen und über das Manifest die Version melden (wie beim Release-Build).
+
+## Schnittstellen-Doku und Portal-Fragen
 
 Vorausgesetzt `scout.portal.docs-url` ist gesetzt, macht Freya bei jedem Lauf (und stuendlich per `scout.portal.docs-cron`) Folgendes:
 
