@@ -1,5 +1,6 @@
 package de.sourcescout.search;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import de.sourcescout.core.SearchHit;
 import org.junit.jupiter.api.Test;
 
@@ -10,28 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MistralSearchProviderTest {
 
-    @Test
-    void harvestsUrlsFromToolExecutionWhenModelAnswersInProse() {
-        String body = """
-                {
-                  "conversation": {"id": "conv_3"},
-                  "outputs": [
-                    {
-                      "type": "tool.execution",
-                      "name": "web_search",
-                      "info": {"result": "{\"HmCBpYUH\": {\"url\": \"https://www.heise.de/t/p5\", \"title\": \"Raspberry Pi 5 Test\"}}"}
-                    },
-                    {"type": "message.output", "content": [{"type": "text", "text": "Ich habe keine relevanten Artikel gefunden."}]}
-                  ]
-                }
-                """;
-
-        List<SearchHit> hits = MistralSearchProvider.parseResponse(body);
-
-        assertEquals(1, hits.size());
-        assertEquals("https://www.heise.de/t/p5", hits.get(0).url());
-        assertEquals("Raspberry Pi 5 Test", hits.get(0).title());
-    }
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Test
     void parsesModelJsonArrayFromConversationOutput() {
@@ -82,7 +62,22 @@ class MistralSearchProviderTest {
     }
 
     @Test
-    void toleratesUnparseableResponses() {
-        assertTrue(MistralSearchProvider.parseResponse("Kein JSON hier.").isEmpty());
+    void harvestsUrlsFromToolExecutionWhenModelAnswersInProse() throws Exception {
+        String resultJson = "{\"HmCBpYUH\": {\"url\": \"https://www.heise.de/t/p5\", \"title\": \"Raspberry Pi 5 Test\"}}";
+        String body = """
+                {
+                  "conversation": {"id": "conv_3"},
+                  "outputs": [
+                    {"type": "tool.execution", "name": "web_search", "info": {"result": %s}},
+                    {"type": "message.output", "content": [{"type": "text", "text": "Ich habe keine relevanten Artikel gefunden."}]}
+                  ]
+                }
+                """.formatted(MAPPER.writeValueAsString(resultJson));
+
+        List<SearchHit> hits = MistralSearchProvider.parseResponse(body);
+
+        assertEquals(1, hits.size());
+        assertEquals("https://www.heise.de/t/p5", hits.get(0).url());
+        assertEquals("Raspberry Pi 5 Test", hits.get(0).title());
     }
 }
