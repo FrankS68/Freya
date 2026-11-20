@@ -12,7 +12,10 @@ public final class HttpClientFactory {
     }
 
     public static RestClient restClient(Duration connectTimeout, Duration readTimeout) {
-        HttpClient httpClient = HttpClient.newBuilder().connectTimeout(connectTimeout).build();
+        HttpClient httpClient = HttpClient.newBuilder()
+                .connectTimeout(connectTimeout)
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .build();
         JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(httpClient);
         factory.setReadTimeout(readTimeout);
         return RestClient.builder().requestFactory(factory).build();

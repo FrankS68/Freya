@@ -72,7 +72,9 @@ public class SelfUpdateService {
                 return false;
             }
             log.info("Update verfuegbar: {} (laufend {}) - lade herunter...", tag, runningVersion);
-            applyUpdate(jarUrl, tag);
+            if (!applyUpdate(jarUrl, tag)) {
+                return false;
+            }
         } catch (Exception ex) {
             log.warn("Update-Pruefung fehlgeschlagen: {}", ex.getMessage());
             return false;
@@ -81,12 +83,12 @@ public class SelfUpdateService {
         return true;
     }
 
-    private void applyUpdate(String jarUrl, String tag) throws Exception {
+    private boolean applyUpdate(String jarUrl, String tag) throws Exception {
         byte[] jarBytes = restClient.get().uri(jarUrl).retrieve().body(byte[].class);
         if (jarBytes == null || jarBytes.length < MIN_JAR_BYTES) {
             log.warn("Heruntergeladene JAR unvollstaendig ({} Bytes) - Update abgebrochen.",
                     jarBytes == null ? 0 : jarBytes.length);
-            return;
+            return false;
         }
         Path target = locateJar();
         Path tmp = target.resolveSibling(target.getFileName() + ".new");
@@ -97,6 +99,7 @@ public class SelfUpdateService {
             Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
         }
         log.info("Update auf {} installiert ({} Bytes) unter {}", tag, jarBytes.length, target);
+        return true;
     }
 
     private void restart() {

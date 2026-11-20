@@ -13,7 +13,7 @@
 
     <groupId>de.sourcescout</groupId>
     <artifactId>source-scout</artifactId>
-    <version>0.1.0</version>
+    <version>0.4.1</version>
     <name>source-scout</name>
     <description>Headless Quellen-Recherche: sucht Quellen per LLM-Websuche, bewertet sie und veroeffentlicht sie in ein Portal</description>
 
