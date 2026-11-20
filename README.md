@@ -33,13 +33,24 @@ Neue Suchanbieter oder LLM-Clients: einfach `SearchProvider` bzw. `LlmClient` al
 | `scout.evaluation.provider` | – | `mistral` oder `gemini` |
 | `scout.evaluation.min-score` / `max-items-per-run` | – | Veröffentlichung erst ab Score / max. Posts pro Lauf |
 | `scout.portal.url` | `PORTAL_API_URL` | REST-Endpunkt des Portals |
+| `scout.portal.docs-url` | `PORTAL_DOCS_URL` | Schnittstellen-Doku (Standard `http://spiekeroog.fritz.box:8082/api/docs`) — Freya prueft sie bei jedem Lauf und stuendlich per Hash auf Aenderungen |
+| `scout.portal.docs-cron` | – | Cron für die Doku-Prüfung (stündlich) |
+| `scout.portal.max-questions-per-run` | – | max. offene Portal-Fragen, die pro Lauf recherchiert werden |
 | `scout.portal.method` | – | HTTP-Methode (Standard `POST`) |
 | `scout.portal.auth-header-name` / `auth-token` | `PORTAL_API_TOKEN` | z. B. `Authorization` + Wert `Bearer <token>` (Prefix je nach Portal im Token mit angeben) |
 | `scout.portal.headers` | – | beliebige zusätzliche Header (`Key: Value`) |
 | `scout.schedule.cron` / `run-on-startup` | – | Standard: alle 6 Stunden + einmal beim Start |
 | `scout.store.path` | – | JSON-Datei der bereits veröffentlichten Einträge |
 
-### Portal-Payload
+### Schnittstellen-Doku und Portal-Fragen
+
+Vorausgesetzt `scout.portal.docs-url` ist gesetzt, macht Freya bei jedem Lauf (und stuendlich per `scout.portal.docs-cron`) Folgendes:
+
+1. **Doku holen und auf Aenderungen pruefen** (Hash-Vergleich; bei Aenderung wird dies mit `SCHNITTSTELLE GEENDERT` geloggt und die neue Fassung unter `data/portal-docs-latest.txt` abgelegt).
+2. **Endpunkte selbst ermitteln**: das konfigurierte LLM analysiert die Doku und liefert den Endpunkt zum Abrufen offener Fragen und zum Einreichen von Antworten (Fallback: Heuristik über `/api/...`-Pfade mit "question/frage" bzw. "answer/antwort/result"). Das Mapping liegt in `data/portal-docs-state.json`.
+3. **Fragen recherchieren**: offene Fragen holen (Felder wie `id`/`question`/`frage`/`text`/`title` werden erkannt), jede Frage wird wie ein Suchthema recherchiert und bewertet; die beste Quelle geht als JSON (`questionId`, `question`, `title`, `url`, `snippet`, `summary`, `relevance`, `reason`, `source`, `publishedAt`) an den ermittelten Antwort-Endpunkt. Jede bearbeitete Frage wird als Duplette markiert und nicht erneut bearbeitet.
+
+## Portal-Payload
 
 Gesendet wird JSON an `scout.portal.url`:
 

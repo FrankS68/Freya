@@ -31,6 +31,9 @@ scout:
     max-items-per-run: 5
   portal:
     url: ${PORTAL_API_URL:}
+    docs-url: ${PORTAL_DOCS_URL:http://spiekeroog.fritz.box:8082/api/docs}
+    docs-cron: "0 17 * * * *"
+    max-questions-per-run: 3
     method: POST
     auth-header-name: Authorization
     auth-token: ${PORTAL_API_TOKEN:}

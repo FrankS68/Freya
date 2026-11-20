@@ -207,6 +207,9 @@ public class ScoutProperties {
 
     public static class Portal {
         private String url = "";
+        private String docsUrl = "";
+        private String docsCron = "0 17 * * * *";
+        private int maxQuestionsPerRun = 3;
         private String method = "POST";
         private String authHeaderName = "Authorization";
         private String authToken = "";
@@ -220,6 +223,30 @@ public class ScoutProperties {
 
         public void setUrl(String url) {
             this.url = url;
+        }
+
+        public String getDocsUrl() {
+            return docsUrl;
+        }
+
+        public void setDocsUrl(String docsUrl) {
+            this.docsUrl = docsUrl;
+        }
+
+        public String getDocsCron() {
+            return docsCron;
+        }
+
+        public void setDocsCron(String docsCron) {
+            this.docsCron = docsCron;
+        }
+
+        public int getMaxQuestionsPerRun() {
+            return maxQuestionsPerRun;
+        }
+
+        public void setMaxQuestionsPerRun(int maxQuestionsPerRun) {
+            this.maxQuestionsPerRun = maxQuestionsPerRun;
         }
 
         public String getMethod() {
