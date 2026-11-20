@@ -162,7 +162,7 @@ public class ScoutProperties {
 
     public static class Gemini {
         private String apiKey = "";
-        private String model = "gemini-3.8-flash";
+        private String model = "gemini-3.1-flash-lite";
         private String baseUrl = "https://generativelanguage.googleapis.com";
 
         public String getApiKey() {

@@ -24,7 +24,7 @@ scout:
     base-url: https://api.mistral.ai
   gemini:
     api-key: ${GEMINI_API_KEY:}
-    model: gemini-3.8-flash
+    model: gemini-3.1-flash-lite
     base-url: https://generativelanguage.googleapis.com
   openai:
     api-key: ${OPENAI_API_KEY:}
