@@ -19,8 +19,7 @@ class MistralSearchProviderTest {
                     {
                       "type": "tool.execution",
                       "name": "web_search",
-                      "info": {"result": "{\"HmCBpYUH\": {\"url\": \"https://www.heise.de/t/p5\", \"title\": "
-                              + "\"Raspberry Pi 5 Test\"}}"}
+                      "info": {"result": "{\"HmCBpYUH\": {\"url\": \"https://www.heise.de/t/p5\", \"title\": \"Raspberry Pi 5 Test\"}}"}
                     },
                     {"type": "message.output", "content": [{"type": "text", "text": "Ich habe keine relevanten Artikel gefunden."}]}
                   ]
