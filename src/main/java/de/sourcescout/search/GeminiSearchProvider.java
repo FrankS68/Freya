@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -54,15 +55,22 @@ public class GeminiSearchProvider implements SearchProvider {
                 buildPrompt(topic, search.getResultsPerProvider(), search.getLanguage()))))));
         body.put("tools", List.of(Map.of("google_search", Map.of())));
 
-        String response = restClient.post()
-                .uri(config.getBaseUrl() + "/v1beta/models/" + config.getModel() + ":generateContent")
-                .header("x-goog-api-key", config.getApiKey())
-                .contentType(MediaType.APPLICATION_JSON)
-                .accept(MediaType.APPLICATION_JSON)
-                .body(body)
-                .retrieve()
-                .body(String.class);
+        String response;
+        try {
+            response = restClient.post()
+                    .uri(config.getBaseUrl() + "/v1beta/models/" + config.getModel() + ":generateContent")
+                    .header("x-goog-api-key", config.getApiKey())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .body(body)
+                    .retrieve()
+                    .body(String.class);
+        } catch (RestClientResponseException ex) {
+            log.warn("Gemini-API-Fehler {}: {}", ex.getStatusCode(), excerpt(ex.getResponseBodyAsString(), 400));
+            return List.of();
+        }
         if (response == null || response.isBlank()) {
+            log.warn("Gemini lieferte eine leere Antwort.");
             return List.of();
         }
         return parseResponse(response);
@@ -87,11 +95,24 @@ public class GeminiSearchProvider implements SearchProvider {
             for (SearchHit hit : hitsFromGroundingChunks(root)) {
                 hits.putIfAbsent(UrlNormalizer.normalize(hit.url()), hit);
             }
-            return new ArrayList<>(hits.values());
+            List<SearchHit> result = new ArrayList<>(hits.values());
+            if (result.isEmpty()) {
+                log.warn("Gemini lieferte keine auswertbaren Treffer. Antwort-Auszug: {}", excerpt(body, 500));
+            }
+            return result;
         } catch (Exception ex) {
-            log.warn("Gemini-Antwort konnte nicht ausgewertet werden: {}", ex.getMessage());
+            log.warn("Gemini-Antwort konnte nicht ausgewertet werden ({}): {}",
+                    ex.getClass().getSimpleName(), ex.getMessage());
             return List.of();
         }
+    }
+
+    private static String excerpt(String text, int maxLength) {
+        if (text == null) {
+            return "";
+        }
+        String condensed = text.replaceAll("\\s+", " ").trim();
+        return condensed.length() <= maxLength ? condensed : condensed.substring(0, maxLength) + "...";
     }
 
     private static List<SearchHit> hitsFromText(JsonNode root) throws JsonProcessingException {

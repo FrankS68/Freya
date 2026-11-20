@@ -13,6 +13,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -53,15 +54,22 @@ public class MistralSearchProvider implements SearchProvider {
         body.put("tools", List.of(Map.of("type", "web_search")));
         body.put("inputs", buildPrompt(topic, search.getResultsPerProvider(), search.getLanguage()));
 
-        String response = restClient.post()
-                .uri(config.getBaseUrl() + "/v1/conversations")
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + config.getApiKey())
-                .contentType(MediaType.APPLICATION_JSON)
-                .accept(MediaType.APPLICATION_JSON)
-                .body(body)
-                .retrieve()
-                .body(String.class);
+        String response;
+        try {
+            response = restClient.post()
+                    .uri(config.getBaseUrl() + "/v1/conversations")
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + config.getApiKey())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .body(body)
+                    .retrieve()
+                    .body(String.class);
+        } catch (RestClientResponseException ex) {
+            log.warn("Mistral-API-Fehler {}: {}", ex.getStatusCode(), excerpt(ex.getResponseBodyAsString(), 400));
+            return List.of();
+        }
         if (response == null || response.isBlank()) {
+            log.warn("Mistral lieferte eine leere Antwort.");
             return List.of();
         }
         return parseResponse(response);
@@ -86,11 +94,24 @@ public class MistralSearchProvider implements SearchProvider {
                 hits.putIfAbsent(UrlNormalizer.normalize(hit.url()), hit);
             }
             addReferences(root, hits);
-            return new ArrayList<>(hits.values());
+            List<SearchHit> result = new ArrayList<>(hits.values());
+            if (result.isEmpty()) {
+                log.warn("Mistral lieferte keine auswertbaren Treffer. Antwort-Auszug: {}", excerpt(body, 500));
+            }
+            return result;
         } catch (Exception ex) {
-            log.warn("Mistral-Antwort konnte nicht ausgewertet werden: {}", ex.getMessage());
+            log.warn("Mistral-Antwort konnte nicht ausgewertet werden ({}): {}",
+                    ex.getClass().getSimpleName(), ex.getMessage());
             return List.of();
         }
+    }
+
+    private static String excerpt(String text, int maxLength) {
+        if (text == null) {
+            return "";
+        }
+        String condensed = text.replaceAll("\\s+", " ").trim();
+        return condensed.length() <= maxLength ? condensed : condensed.substring(0, maxLength) + "...";
     }
 
     private static List<SearchHit> hitsFromJsonArray(String text) {
