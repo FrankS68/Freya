@@ -64,11 +64,11 @@ Wenn dein Portal ein anderes Format erwartet, passe `PortalPublisher#publish` an
 # Build + Tests
 mvn -B verify
 
-# Start (API-Keys als Env-Variablen)
+# Start (API-Keys als Env-Variablen), Ergebnis: target/freya.jar
 MISTRAL_API_KEY=... GEMINI_API_KEY=... \
 PORTAL_API_URL=https://portal.example/api/entries \
 PORTAL_API_TOKEN="Bearer geheim" \
-java -jar target/source-scout-0.1.0.jar
+java -jar target/freya.jar
 ```
 
 Raspberry Pi (Pi 3 oder neuer, 64-bit OS empfohlen). Der Dienst läuft unter einem eigenen, rechtearmigen Benutzer `freya` (Home `/opt/freya`):
@@ -83,6 +83,15 @@ sudo chown -R freya:freya /opt/freya
 sudo -u freya sh -c 'cd /opt/freya && mvn -B -DskipTests package'
 ```
 
+Ohne Maven auf dem Pi: Releases werden bei jedem Git-Tag (`v*`, z. B. `v0.1.0`) automatisch gebaut und als `freya.jar` an den GitHub-Release angehängt. Update am Pi:
+
+```bash
+cd /opt/freya
+sudo -u freya wget -O freya.jar https://github.com/FrankS68/Freya/releases/latest/download/freya.jar
+sudo systemctl restart source-scout
+```
+
+Falls der Pi selbst baut, liegt das Ergebnis ab sofort unter `target/freya.jar` — dann `sudo cp target/freya.jar /opt/freya/freya.jar && sudo systemctl restart source-scout`.
 ### Als Dienst (systemd)
 
 Vorlage: `deploy/source-scout.service` (läuft als Benutzer `freya`, mit `ProtectSystem`, `ReadWritePaths` und `PrivateTmp` abgeschottet). Die Daten der Dupletten-Datei landen unter `/opt/freya/data/`.
