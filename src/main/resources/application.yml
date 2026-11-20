@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: source-scout
+  main:
+    web-application-type: none
+
+scout:
+  schedule:
+    cron: "0 0 */6 * * *"
+    run-on-startup: true
+  search:
+    topics:
+      - "Beispielthema - hier eigene Suchthemen eintragen"
+    providers:
+      - mistral
+      - gemini
+    results-per-provider: 8
+    language: de
+  mistral:
+    api-key: ${MISTRAL_API_KEY:}
+    model: mistral-medium-latest
+    base-url: https://api.mistral.ai
+  gemini:
+    api-key: ${GEMINI_API_KEY:}
+    model: gemini-2.5-flash
+    base-url: https://generativelanguage.googleapis.com
+  evaluation:
+    provider: mistral
+    min-score: 70
+    max-candidates: 25
+    max-items-per-run: 5
+  portal:
+    url: ${PORTAL_API_URL:}
+    method: POST
+    auth-header-name: Authorization
+    auth-token: ${PORTAL_API_TOKEN:}
+    connect-timeout: 10s
+    read-timeout: 30s
+  store:
+    path: ./data/processed-items.json
+
+logging:
+  level:
+    root: info
