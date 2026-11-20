@@ -71,20 +71,26 @@ PORTAL_API_TOKEN="Bearer geheim" \
 java -jar target/source-scout-0.1.0.jar
 ```
 
-Raspberry Pi (Pi 3 oder neuer, 64-bit OS empfohlen):
+Raspberry Pi (Pi 3 oder neuer, 64-bit OS empfohlen). Der Dienst läuft unter einem eigenen, rechtearmigen Benutzer `freya` (Home `/opt/freya`):
 
 ```bash
 sudo apt install -y openjdk-17-jdk-headless maven
-git clone <dein-repo> /opt/source-scout && cd /opt/source-scout
-mvn -B -DskipTests package
+
+sudo useradd --system --create-home --home-dir /opt/freya --shell /usr/sbin/nologin freya
+sudo git clone https://github.com/FrankS68/Freya.git /opt/freya
+sudo chown -R freya:freya /opt/freya
+
+sudo -u freya sh -c 'cd /opt/freya && mvn -B -DskipTests package'
 ```
 
 ### Als Dienst (systemd)
 
-Vorlage: `deploy/source-scout.service`. Secrets gehören in eine separate Datei, die nur vom Dienst-User lesbar ist:
+Vorlage: `deploy/source-scout.service` (läuft als Benutzer `freya`, mit `ProtectSystem`, `ReadWritePaths` und `PrivateTmp` abgeschottet). Die Daten der Dupletten-Datei landen unter `/opt/freya/data/`.
+
+Secrets gehören in eine separate Datei, die nur vom Benutzer `freya` lesbar ist:
 
 ```ini
-# /opt/source-scout/.env   (chmod 600)
+# /opt/freya/.env   (chmod 600, Eigentümer freya)
 MISTRAL_API_KEY=...
 GEMINI_API_KEY=...
 PORTAL_API_URL=https://portal.example/api/entries
@@ -92,10 +98,19 @@ PORTAL_API_TOKEN=Bearer geheim
 ```
 
 ```bash
+sudo touch /opt/freya/.env && sudo chown freya:freya /opt/freya/.env && sudo chmod 600 /opt/freya/.env
+
 sudo cp deploy/source-scout.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now source-scout
 journalctl -u source-scout -f
+```
+
+Anpassungen am Code oder an der Konfiguration machst du als `freya` (z. B. `sudo -u freya vi /opt/freya/src/main/resources/application.yml`), danach neu bauen und starten:
+
+```bash
+sudo -u freya sh -c 'cd /opt/freya && mvn -B -DskipTests package'
+sudo systemctl restart source-scout
 ```
 
 ### Docker (optional, Multi-Arch inkl. ARM)

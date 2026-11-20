@@ -5,12 +5,18 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=pi
-WorkingDirectory=/opt/source-scout
-EnvironmentFile=/opt/source-scout/.env
-ExecStart=/usr/bin/java -Xmx200m -jar /opt/source-scout/target/source-scout-0.1.0.jar
+User=freya
+Group=freya
+WorkingDirectory=/opt/freya
+EnvironmentFile=/opt/freya/.env
+ExecStart=/usr/bin/java -Xmx200m -jar /opt/freya/target/source-scout-0.1.0.jar
 Restart=on-failure
 RestartSec=30
+NoNewPrivileges=yes
+ProtectSystem=full
+ProtectHome=yes
+ReadWritePaths=/opt/freya
+PrivateTmp=yes
 
 [Install]
 WantedBy=multi-user.target
