@@ -15,16 +15,21 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 @Component
 public class ResearchPipeline {
 
     private static final Logger log = LoggerFactory.getLogger(ResearchPipeline.class);
+    private static final String STRATEGY_ROTATE = "rotate";
 
     private final ScoutProperties properties;
     private final List<SearchProvider> searchProviders;
     private final EvaluationService evaluationService;
     private final ProcessedItemStore store;
+    private final AtomicInteger runCounter = new AtomicInteger();
+    private List<SearchProvider> runProviders;
 
     public ResearchPipeline(ScoutProperties properties,
                             List<SearchProvider> searchProviders,
@@ -36,12 +41,28 @@ public class ResearchPipeline {
         this.store = store;
     }
 
-    public List<EvaluatedItem> researchAndRank(String topic, Set<String> seenInRun) {
-        List<SearchProvider> active = searchProviders.stream()
-                .filter(provider -> properties.getSearch().getProviders().contains(provider.id()))
-                .toList();
+    public void beginRun() {
+        List<SearchProvider> active = activeProviders();
         if (active.isEmpty()) {
             log.warn("Kein Suchanbieter aktiv (scout.search.providers={}).", properties.getSearch().getProviders());
+            runProviders = List.of();
+            return;
+        }
+        if (!STRATEGY_ROTATE.equalsIgnoreCase(properties.getSearch().getStrategy())) {
+            runProviders = active;
+            log.info("Recherche-Anbieter dieses Laufs: {}.", ids(runProviders));
+            return;
+        }
+        List<SearchProvider> ready = active.stream().filter(SearchProvider::isReady).toList();
+        List<SearchProvider> pool = ready.isEmpty() ? active : ready;
+        SearchProvider chosen = pool.get(Math.floorMod(runCounter.getAndIncrement(), pool.size()));
+        runProviders = List.of(chosen);
+        log.info("Recherche-Anbieter dieses Laufs: {}.", ids(runProviders));
+    }
+
+    public List<EvaluatedItem> researchAndRank(String topic, Set<String> seenInRun) {
+        List<SearchProvider> active = runProviders != null ? runProviders : activeProviders();
+        if (active.isEmpty()) {
             return List.of();
         }
         List<SearchHit> candidates = new ArrayList<>();
@@ -71,5 +92,15 @@ public class ResearchPipeline {
                 .sorted(Comparator.comparingInt(EvaluatedItem::relevance).reversed())
                 .limit(properties.getEvaluation().getMaxItemsPerRun())
                 .toList();
+    }
+
+    private List<SearchProvider> activeProviders() {
+        return searchProviders.stream()
+                .filter(provider -> properties.getSearch().getProviders().contains(provider.id()))
+                .toList();
+    }
+
+    private static String ids(List<SearchProvider> providers) {
+        return providers.stream().map(SearchProvider::id).collect(Collectors.joining(", "));
     }
 }

@@ -8,5 +8,9 @@ public interface SearchProvider {
 
     String id();
 
+    default boolean isReady() {
+        return true;
+    }
+
     List<SearchHit> search(String topic);
 }

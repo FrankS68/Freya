@@ -14,10 +14,12 @@ public class ScoutProperties {
     private final Search search = new Search();
     private final Mistral mistral = new Mistral();
     private final Gemini gemini = new Gemini();
+    private final OpenAi openai = new OpenAi();
     private final Evaluation evaluation = new Evaluation();
     private final Portal portal = new Portal();
     private final Store store = new Store();
     private final Update update = new Update();
+    private final LogReport logReport = new LogReport();
 
     public Schedule getSchedule() {
         return schedule;
@@ -33,6 +35,14 @@ public class ScoutProperties {
 
     public Gemini getGemini() {
         return gemini;
+    }
+
+    public OpenAi getOpenai() {
+        return openai;
+    }
+
+    public LogReport getLogReport() {
+        return logReport;
     }
 
     public Evaluation getEvaluation() {
@@ -75,6 +85,7 @@ public class ScoutProperties {
     public static class Search {
         private List<String> topics = List.of("Beispielthema");
         private List<String> providers = List.of("mistral", "gemini");
+        private String strategy = "rotate";
         private int resultsPerProvider = 8;
         private String language = "de";
 
@@ -92,6 +103,14 @@ public class ScoutProperties {
 
         public void setProviders(List<String> providers) {
             this.providers = providers;
+        }
+
+        public String getStrategy() {
+            return strategy;
+        }
+
+        public void setStrategy(String strategy) {
+            this.strategy = strategy;
         }
 
         public int getResultsPerProvider() {
@@ -168,6 +187,66 @@ public class ScoutProperties {
 
         public void setBaseUrl(String baseUrl) {
             this.baseUrl = baseUrl;
+        }
+    }
+
+    public static class OpenAi {
+        private String apiKey = "";
+        private String model = "gpt-6.2-astra";
+        private String baseUrl = "https://api.openai.com";
+
+        public String getApiKey() {
+            return apiKey;
+        }
+
+        public void setApiKey(String apiKey) {
+            this.apiKey = apiKey;
+        }
+
+        public String getModel() {
+            return model;
+        }
+
+        public void setModel(String model) {
+            this.model = model;
+        }
+
+        public String getBaseUrl() {
+            return baseUrl;
+        }
+
+        public void setBaseUrl(String baseUrl) {
+            this.baseUrl = baseUrl;
+        }
+    }
+
+    public static class LogReport {
+        private boolean enabled = true;
+        private String libraryId = "";
+        private int tailLines = 100;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public String getLibraryId() {
+            return libraryId;
+        }
+
+        public void setLibraryId(String libraryId) {
+            this.libraryId = libraryId;
+        }
+
+        public int getTailLines() {
+            return tailLines;
+        }
+
+        public void setTailLines(int tailLines) {
+            this.tailLines = tailLines;
         }
     }
 

@@ -3,6 +3,8 @@ package de.sourcescout.scout;
 import de.sourcescout.config.ScoutProperties;
 import de.sourcescout.core.EvaluatedItem;
 import de.sourcescout.core.UrlNormalizer;
+import de.sourcescout.log.MistralLogReporter;
+import de.sourcescout.log.RunLogCollector;
 import de.sourcescout.portal.DocsMapping;
 import de.sourcescout.portal.PortalDocsService;
 import de.sourcescout.portal.PortalPublisher;
@@ -30,6 +32,7 @@ public class ScoutService {
     private final QuestionResearchService questionResearchService;
     private final PortalPublisher portalPublisher;
     private final ProcessedItemStore store;
+    private final MistralLogReporter logReporter;
 
     public ScoutService(ScoutProperties properties,
                         SelfUpdateService selfUpdateService,
@@ -37,7 +40,8 @@ public class ScoutService {
                         PortalDocsService portalDocsService,
                         QuestionResearchService questionResearchService,
                         PortalPublisher portalPublisher,
-                        ProcessedItemStore store) {
+                        ProcessedItemStore store,
+                        MistralLogReporter logReporter) {
         this.properties = properties;
         this.selfUpdateService = selfUpdateService;
         this.pipeline = pipeline;
@@ -45,6 +49,8 @@ public class ScoutService {
         this.questionResearchService = questionResearchService;
         this.portalPublisher = portalPublisher;
         this.store = store;
+        this.logReporter = logReporter;
+        RunLogCollector.attach();
     }
 
     public void runOnce() {
@@ -56,27 +62,39 @@ public class ScoutService {
         } catch (Exception ex) {
             log.warn("Update-Pruefung fehlgeschlagen: {}", ex.getMessage());
         }
+
+        RunLogCollector.startRun();
         try {
-            portalDocsService.checkForChanges()
-                    .filter(DocsMapping::hasQuestionsEndpoint)
-                    .ifPresent(questionResearchService::researchPending);
-        } catch (Exception ex) {
-            log.warn("Fragen-Recherche fehlgeschlagen: {}", ex.getMessage());
-        }
+            pipeline.beginRun();
+            try {
+                portalDocsService.checkForChanges()
+                        .filter(DocsMapping::hasQuestionsEndpoint)
+                        .ifPresent(questionResearchService::researchPending);
+            } catch (Exception ex) {
+                log.warn("Fragen-Recherche fehlgeschlagen: {}", ex.getMessage());
+            }
 
-        Set<String> seenInRun = new HashSet<>();
-        if (!portalPublisher.isConfigured()) {
-            log.warn("Portal-API ist nicht konfiguriert (scout.portal.url) - Treffer werden nur geloggt.");
-        }
-        List<String> topics = properties.getSearch().getTopics();
-        log.info("Scout-Lauf gestartet: {} Thema(ta)", topics.size());
+            Set<String> seenInRun = new HashSet<>();
+            if (!portalPublisher.isConfigured()) {
+                log.warn("Portal-API ist nicht konfiguriert (scout.portal.url) - Treffer werden nur geloggt.");
+            }
+            List<String> topics = properties.getSearch().getTopics();
+            log.info("Scout-Lauf gestartet: {} Thema(ta)", topics.size());
 
-        int published = 0;
-        for (String topic : topics) {
-            List<EvaluatedItem> eligible = pipeline.researchAndRank(topic, seenInRun);
-            published += publish(eligible);
+            int published = 0;
+            for (String topic : topics) {
+                List<EvaluatedItem> eligible = pipeline.researchAndRank(topic, seenInRun);
+                published += publish(eligible);
+            }
+            log.info("Scout-Lauf beendet: {} veroeffentlicht.", published);
+        } finally {
+            List<String> lines = RunLogCollector.snapshotAndStop();
+            int keep = Math.max(10, properties.getLogReport().getTailLines());
+            if (lines.size() > keep) {
+                lines = lines.subList(lines.size() - keep, lines.size());
+            }
+            logReporter.reportRun(lines);
         }
-        log.info("Scout-Lauf beendet: {} veroeffentlicht.", published);
     }
 
     private int publish(List<EvaluatedItem> eligible) {

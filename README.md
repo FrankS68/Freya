@@ -26,11 +26,13 @@ Neue Suchanbieter oder LLM-Clients: einfach `SearchProvider` bzw. `LlmClient` al
 | Schlüssel | Env-Var | Bedeutung |
 |---|---|---|
 | `scout.search.topics` | – | Suchthemen (Liste) |
-| `scout.search.providers` | – | `mistral`, `gemini` oder selbst hinzugefügte IDs |
+| `scout.search.providers` | – | `mistral`, `gemini`, `openai` oder selbst hinzugefügte IDs |
+| `scout.search.strategy` | – | `rotate` (Standard): pro Lauf wird genau EIN Anbieter verwendet, abwechselnd über alle einsatzbereiten. `all`: alle Anbieter in jedem Lauf (altes Verhalten) |
 | `scout.search.results-per-provider` / `language` | – | max. Treffer pro Anbieter / Quellensprache |
-| `scout.mistral.api-key` | `MISTRAL_API_KEY` | Mistral-API-Key (Pflicht für Mistral-Suche/Bewertung) |
+| `scout.mistral.api-key` | `MISTRAL_API_KEY` | Mistral-API-Key (Recherche, Bewertung und Lauf-Log) |
 | `scout.gemini.api-key` | `GEMINI_API_KEY` | Google-Gemini-API-Key |
-| `scout.evaluation.provider` | – | `mistral` oder `gemini` |
+| `scout.openai.api-key` | `OPENAI_API_KEY` | OpenAI-API-Key (Suche über die Responses-API mit `web_search`) |
+| `scout.evaluation.provider` | – | `mistral`, `gemini` oder `openai` |
 | `scout.evaluation.min-score` / `max-items-per-run` | – | Veröffentlichung erst ab Score / max. Posts pro Lauf |
 | `scout.portal.url` | `PORTAL_API_URL` | REST-Endpunkt des Portals |
 | `scout.portal.docs-url` | `PORTAL_DOCS_URL` | Schnittstellen-Doku (Standard `http://spiekeroog.fritz.box:8082/api/docs`) — Freya prueft sie bei jedem Lauf und stuendlich per Hash auf Aenderungen |
@@ -45,6 +47,10 @@ Neue Suchanbieter oder LLM-Clients: einfach `SearchProvider` bzw. `LlmClient` al
 ### Auto-Update
 
 Standardmäßig prüft Freya bei jedem Lauf (auch beim Start), ob es ein neueres GitHub-Release gibt (`scout.update.repo`, abgefragt über `/releases/latest`). Ist die dort angehängte `freya.jar` neuer als die laufende Version, wird sie nach `/opt/freya/freya.jar` geladen, atomar ersetzt und der Dienst beendet sich selbst — systemd (`Restart=always`) startet ihn direkt mit der neuen Version. Deaktivieren mit `scout.update.enabled: false`. Bedingung: das laufende JAR muss unter `/opt/freya/` liegen und über das Manifest die Version melden (wie beim Release-Build).
+
+## Lauf-Log in der Mistral-Bibliothek
+
+Nach jedem Lauf legt Freya die letzten Log-Zeilen (Standard 100, `scout.logreport.tail-lines`) als Markdown-Dokument (`freya-lauf-<Zeitstempel>.md`) in einer Mistral-Dokumentenbibliothek ab — ein Dokument pro Lauf. Genutzt wird dafür der Mistral-API-Key (`MISTRAL_API_KEY`), unabhängig davon, welcher Anbieter recherchiert hat. Die Bibliothek heißt standardmäßig `Freya-Logs` und wird beim ersten Lauf automatisch erstellt; ihre ID wird in `data/log-library.json` gespeichert (vorbelegen mit `scout.logreport.library-id` bzw. Env-Var `MISTRAL_LOG_LIBRARY_ID`). Die Bibliothek kann im Mistral-Studio (oder per API) gelesen werden; sie wächst mit jedem Lauf und sollte gelegentlich geleert werden. Deaktivieren mit `scout.logreport.enabled: false`.
 
 ## Schnittstellen-Doku und Portal-Fragen
 
@@ -117,9 +123,13 @@ Secrets gehören in eine separate Datei, die nur vom Benutzer `freya` lesbar ist
 # /opt/freya/.env   (chmod 600, Eigentümer freya)
 MISTRAL_API_KEY=...
 GEMINI_API_KEY=...
+OPENAI_API_KEY=...
+MISTRAL_LOG_LIBRARY_ID=
 PORTAL_API_URL=https://portal.example/api/entries
 PORTAL_API_TOKEN=Bearer geheim
 ```
+
+Nur einen Key setzen? Kein Problem: `scout.search.strategy: rotate` rotiert automatisch nur über die Anbieter, deren Key gesetzt ist. Weitere Anbieter werden ohne Key mit einer Warnung übersprungen.
 
 ```bash
 sudo touch /opt/freya/.env && sudo chown freya:freya /opt/freya/.env && sudo chmod 600 /opt/freya/.env

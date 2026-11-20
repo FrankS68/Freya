@@ -42,9 +42,15 @@ public class MistralSearchProvider implements SearchProvider {
     }
 
     @Override
+    public boolean isReady() {
+        String apiKey = properties.getMistral().getApiKey();
+        return apiKey != null && !apiKey.isBlank();
+    }
+
+    @Override
     public List<SearchHit> search(String topic) {
         ScoutProperties.Mistral config = properties.getMistral();
-        if (config.getApiKey() == null || config.getApiKey().isBlank()) {
+        if (!isReady()) {
             log.warn("scout.mistral.api-key ist nicht gesetzt - Mistral-Suche wird uebersprungen.");
             return List.of();
         }

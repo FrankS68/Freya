@@ -14,6 +14,8 @@ scout:
     providers:
       - mistral
       - gemini
+      - openai
+    strategy: rotate
     results-per-provider: 8
     language: de
   mistral:
@@ -24,6 +26,10 @@ scout:
     api-key: ${GEMINI_API_KEY:}
     model: gemini-3.8-flash
     base-url: https://generativelanguage.googleapis.com
+  openai:
+    api-key: ${OPENAI_API_KEY:}
+    model: gpt-6.2-astra
+    base-url: https://api.openai.com
   evaluation:
     provider: mistral
     min-score: 70
@@ -44,6 +50,10 @@ scout:
   update:
     enabled: true
     repo: FrankS68/Freya
+  logreport:
+    enabled: true
+    library-id: ${MISTRAL_LOG_LIBRARY_ID:}
+    tail-lines: 100
 
 logging:
   level:

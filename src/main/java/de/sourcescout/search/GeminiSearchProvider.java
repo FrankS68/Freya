@@ -42,9 +42,15 @@ public class GeminiSearchProvider implements SearchProvider {
     }
 
     @Override
+    public boolean isReady() {
+        String apiKey = properties.getGemini().getApiKey();
+        return apiKey != null && !apiKey.isBlank();
+    }
+
+    @Override
     public List<SearchHit> search(String topic) {
         ScoutProperties.Gemini config = properties.getGemini();
-        if (config.getApiKey() == null || config.getApiKey().isBlank()) {
+        if (!isReady()) {
             log.warn("scout.gemini.api-key ist nicht gesetzt - Gemini-Suche wird uebersprungen.");
             return List.of();
         }
