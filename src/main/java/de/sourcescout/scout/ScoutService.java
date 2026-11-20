@@ -8,6 +8,7 @@ import de.sourcescout.log.RunLogCollector;
 import de.sourcescout.portal.DocsMapping;
 import de.sourcescout.portal.PortalDocsService;
 import de.sourcescout.portal.PortalPublisher;
+import de.sourcescout.portal.PortalTopicsService;
 import de.sourcescout.portal.QuestionResearchService;
 import de.sourcescout.store.ProcessedItem;
 import de.sourcescout.store.ProcessedItemStore;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @Service
@@ -33,6 +35,7 @@ public class ScoutService {
     private final PortalPublisher portalPublisher;
     private final ProcessedItemStore store;
     private final MistralLogReporter logReporter;
+    private final PortalTopicsService portalTopicsService;
 
     public ScoutService(ScoutProperties properties,
                         SelfUpdateService selfUpdateService,
@@ -41,7 +44,8 @@ public class ScoutService {
                         QuestionResearchService questionResearchService,
                         PortalPublisher portalPublisher,
                         ProcessedItemStore store,
-                        MistralLogReporter logReporter) {
+                        MistralLogReporter logReporter,
+                        PortalTopicsService portalTopicsService) {
         this.properties = properties;
         this.selfUpdateService = selfUpdateService;
         this.pipeline = pipeline;
@@ -50,6 +54,7 @@ public class ScoutService {
         this.portalPublisher = portalPublisher;
         this.store = store;
         this.logReporter = logReporter;
+        this.portalTopicsService = portalTopicsService;
         RunLogCollector.attach();
     }
 
@@ -66,9 +71,14 @@ public class ScoutService {
         RunLogCollector.startRun();
         try {
             pipeline.beginRun();
+            Optional<DocsMapping> mapping = Optional.empty();
             try {
-                portalDocsService.checkForChanges()
-                        .filter(DocsMapping::hasQuestionsEndpoint)
+                mapping = portalDocsService.checkForChanges();
+            } catch (Exception ex) {
+                log.warn("Doku-Pruefung fehlgeschlagen: {}", ex.getMessage());
+            }
+            try {
+                mapping.filter(DocsMapping::hasQuestionsEndpoint)
                         .ifPresent(questionResearchService::researchPending);
             } catch (Exception ex) {
                 log.warn("Fragen-Recherche fehlgeschlagen: {}", ex.getMessage());
@@ -78,7 +88,8 @@ public class ScoutService {
             if (!portalPublisher.isConfigured()) {
                 log.warn("Portal-API ist nicht konfiguriert (scout.portal.url) - Treffer werden nur geloggt.");
             }
-            List<String> topics = properties.getSearch().getTopics();
+            List<String> topics = topicsForRun(mapping);
+            log.info("Scout-Lauf gestartet: {} Thema(ta)", topics.size());
             log.info("Scout-Lauf gestartet: {} Thema(ta)", topics.size());
 
             int published = 0;
@@ -95,6 +106,23 @@ public class ScoutService {
             }
             logReporter.reportRun(lines);
         }
+    }
+
+    private List<String> topicsForRun(Optional<DocsMapping> mapping) {
+        if (mapping.filter(DocsMapping::hasTopicsEndpoint).isPresent()) {
+            try {
+                List<String> portalTopics = portalTopicsService.fetchTopics(
+                        mapping.filter(DocsMapping::hasTopicsEndpoint).get());
+                if (!portalTopics.isEmpty()) {
+                    log.info("{} Thema(ta) aus der Portal-API gezogen.", portalTopics.size());
+                    return portalTopics;
+                }
+                log.info("Portal liefert kein Thema - verwende konfigurierte Themen.");
+            } catch (Exception ex) {
+                log.warn("Themen konnten nicht aus dem Portal geladen werden: {}", ex.getMessage());
+            }
+        }
+        return properties.getSearch().getTopics();
     }
 
     private int publish(List<EvaluatedItem> eligible) {

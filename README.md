@@ -25,7 +25,7 @@ Neue Suchanbieter oder LLM-Clients: einfach `SearchProvider` bzw. `LlmClient` al
 
 | Schlüssel | Env-Var | Bedeutung |
 |---|---|---|
-| `scout.search.topics` | – | Suchthemen (Liste) |
+| `scout.search.topics` | – | Suchthemen (Liste) — nur Fallback: sobald die Portal-Doku einen Themen-Endpunkt liefert, zieht Freya die Themen jedes Mal von dort |
 | `scout.search.providers` | – | `mistral`, `gemini`, `openai` oder selbst hinzugefügte IDs |
 | `scout.search.strategy` | – | `rotate` (Standard): pro Lauf wird genau EIN Anbieter verwendet, abwechselnd über alle einsatzbereiten. `all`: alle Anbieter in jedem Lauf (altes Verhalten) |
 | `scout.search.results-per-provider` / `language` | – | max. Treffer pro Anbieter / Quellensprache |

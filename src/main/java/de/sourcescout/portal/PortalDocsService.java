@@ -102,15 +102,17 @@ public class PortalDocsService {
 
     private DocsMapping interpret(String raw) {
         DocsMapping interpreted = interpretWithLlm(raw);
-        if (interpreted != null && (interpreted.hasQuestionsEndpoint() || interpreted.hasAnswerEndpoint())) {
-            log.info("Schnittstellen-Mapping (LLM): Fragen={}, Methode={}, Antwort={}, Methode={}",
+        if (interpreted != null && (interpreted.hasQuestionsEndpoint() || interpreted.hasAnswerEndpoint()
+                || interpreted.hasTopicsEndpoint())) {
+            log.info("Schnittstellen-Mapping (LLM): Fragen={}, Methode={}, Antwort={}, Methode={}, Themen={}, Methode={}",
                     interpreted.questionsEndpoint(), interpreted.questionsMethod(),
-                    interpreted.answerEndpoint(), interpreted.answerMethod());
+                    interpreted.answerEndpoint(), interpreted.answerMethod(),
+                    interpreted.topicsEndpoint(), interpreted.topicsMethod());
             return interpreted;
         }
         DocsMapping heuristic = heuristic(raw);
-        log.info("Schnittstellen-Mapping (Heuristik): Fragen={}, Antwort={}",
-                heuristic.questionsEndpoint(), heuristic.answerEndpoint());
+        log.info("Schnittstellen-Mapping (Heuristik): Fragen={}, Antwort={}, Themen={}",
+                heuristic.questionsEndpoint(), heuristic.answerEndpoint(), heuristic.topicsEndpoint());
         return heuristic;
     }
 
@@ -120,10 +122,12 @@ public class PortalDocsService {
         }
         try {
             String system = "Analysiere eine REST-API-Doku (HTML oder JSON). Identifiziere (1) den Endpunkt zum "
-                    + "Abrufen offener Recherche-Fragen als Liste und (2) den Endpunkt zum Einreichen einer Antwort "
-                    + "zu einer Frage. Antworte ausschliesslich mit einem JSON-Objekt: "
+                    + "Abrufen offener Recherche-Fragen als Liste, (2) den Endpunkt zum Einreichen einer Antwort "
+                    + "zu einer Frage und (3) den Endpunkt, der Recherche-Themen/Themen (Topics) als Liste liefert. "
+                    + "Antworte ausschliesslich mit einem JSON-Objekt: "
                     + "{\"questionsEndpoint\": \"/pfad/oder-null\", \"questionsMethod\": \"GET\", "
-                    + "\"answerEndpoint\": \"/pfad/oder-null\", \"answerMethod\": \"POST\"}. "
+                    + "\"answerEndpoint\": \"/pfad/oder-null\", \"answerMethod\": \"POST\", "
+                    + "\"topicsEndpoint\": \"/pfad/oder-null\", \"topicsMethod\": \"GET\"}. "
                     + "Verwende null fuer Endpunkte, die in der Doku nicht vorkommen.";
             String response = llmClient.completeJson(system, "Doku: " + excerpt(raw, 6000));
             JsonNode node = JsonExtractor.extractJsonObject(response).orElse(null);
@@ -134,7 +138,9 @@ public class PortalDocsService {
                     textOrNull(node, "questionsEndpoint"),
                     textOrNull(node, "questionsMethod"),
                     textOrNull(node, "answerEndpoint"),
-                    textOrNull(node, "answerMethod"));
+                    textOrNull(node, "answerMethod"),
+                    textOrNull(node, "topicsEndpoint"),
+                    textOrNull(node, "topicsMethod"));
         } catch (Exception ex) {
             log.warn("LLM-Analyse der Schnittstellen-Doku fehlgeschlagen: {}", ex.getMessage());
             return null;
@@ -144,6 +150,7 @@ public class PortalDocsService {
     static DocsMapping heuristic(String raw) {
         String questions = null;
         String answers = null;
+        String topics = null;
         Matcher matcher = API_PATH.matcher(raw);
         while (matcher.find()) {
             String path = matcher.group();
@@ -155,8 +162,12 @@ public class PortalDocsService {
                     && (lower.contains("answer") || lower.contains("antwort") || lower.contains("result"))) {
                 answers = path;
             }
+            if (topics == null && !path.equals(questions) && !path.equals(answers)
+                    && (lower.contains("topic") || lower.contains("thema"))) {
+                topics = path;
+            }
         }
-        return new DocsMapping(questions, "GET", answers, "POST");
+        return new DocsMapping(questions, "GET", answers, "POST", topics, "GET");
     }
 
     private static String textOrNull(JsonNode node, String field) {
@@ -198,6 +209,8 @@ public class PortalDocsService {
                 state.put("questionsMethod", mapping.questionsMethod());
                 state.put("answerEndpoint", mapping.answerEndpoint());
                 state.put("answerMethod", mapping.answerMethod());
+                state.put("topicsEndpoint", mapping.topicsEndpoint());
+                state.put("topicsMethod", mapping.topicsMethod());
             }
             Path tmp = stateFile.resolveSibling(stateFile.getFileName() + ".tmp");
             mapper.writeValue(tmp.toFile(), state);
@@ -219,7 +232,9 @@ public class PortalDocsService {
                     textOrNull(node, "questionsEndpoint"),
                     textOrNull(node, "questionsMethod"),
                     textOrNull(node, "answerEndpoint"),
-                    textOrNull(node, "answerMethod"));
+                    textOrNull(node, "answerMethod"),
+                    textOrNull(node, "topicsEndpoint"),
+                    textOrNull(node, "topicsMethod"));
         } catch (Exception ex) {
             log.warn("Doku-Status konnte nicht geladen werden: {}", ex.getMessage());
         }
