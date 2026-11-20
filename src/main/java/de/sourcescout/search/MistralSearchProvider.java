@@ -104,6 +104,7 @@ public class MistralSearchProvider implements SearchProvider {
                 hits.putIfAbsent(UrlNormalizer.normalize(hit.url()), hit);
             }
             addReferences(root, hits);
+            addUrlNodes(root, hits);
             List<SearchHit> result = new ArrayList<>(hits.values());
             if (result.isEmpty()) {
                 log.warn("Mistral lieferte keine auswertbaren Treffer. Antwort-Auszug: {}", excerpt(body, 500));
@@ -139,6 +140,32 @@ public class MistralSearchProvider implements SearchProvider {
                     return hits;
                 })
                 .orElse(List.of());
+    }
+
+    private static void addUrlNodes(JsonNode node, LinkedHashMap<String, SearchHit> hits) {
+        if (node.isTextual()) {
+            String value = node.asText().trim();
+            if (value.startsWith("{") || value.startsWith("[")) {
+                try {
+                    addUrlNodes(MAPPER.readTree(value), hits);
+                } catch (Exception ignoredEx) {
+                    log.debug("Kein JSON in Textfeld - ignoriert.");
+                }
+            }
+        } else if (node.isObject()) {
+            JsonNode url = node.get("url");
+            if (url != null && url.isTextual() && url.asText().startsWith("http")) {
+                SearchHit hit = SearchHit.fromJson(node, ID);
+                if (hit != null) {
+                    hits.putIfAbsent(UrlNormalizer.normalize(hit.url()), hit);
+                }
+            }
+            node.fields().forEachRemaining(entry -> addUrlNodes(entry.getValue(), hits));
+        } else if (node.isArray()) {
+            for (JsonNode item : node) {
+                addUrlNodes(item, hits);
+            }
+        }
     }
 
     private static void addReferences(JsonNode node, LinkedHashMap<String, SearchHit> hits) {

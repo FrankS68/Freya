@@ -11,6 +11,30 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class MistralSearchProviderTest {
 
     @Test
+    void harvestsUrlsFromToolExecutionWhenModelAnswersInProse() {
+        String body = """
+                {
+                  "conversation": {"id": "conv_3"},
+                  "outputs": [
+                    {
+                      "type": "tool.execution",
+                      "name": "web_search",
+                      "info": {"result": "{\"HmCBpYUH\": {\"url\": \"https://www.heise.de/t/p5\", \"title\": "
+                              + "\"Raspberry Pi 5 Test\"}}"}
+                    },
+                    {"type": "message.output", "content": [{"type": "text", "text": "Ich habe keine relevanten Artikel gefunden."}]}
+                  ]
+                }
+                """;
+
+        List<SearchHit> hits = MistralSearchProvider.parseResponse(body);
+
+        assertEquals(1, hits.size());
+        assertEquals("https://www.heise.de/t/p5", hits.get(0).url());
+        assertEquals("Raspberry Pi 5 Test", hits.get(0).title());
+    }
+
+    @Test
     void parsesModelJsonArrayFromConversationOutput() {
         String body = """
                 {

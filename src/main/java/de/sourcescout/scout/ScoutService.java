@@ -90,7 +90,6 @@ public class ScoutService {
             }
             List<String> topics = topicsForRun(mapping);
             log.info("Scout-Lauf gestartet: {} Thema(ta)", topics.size());
-            log.info("Scout-Lauf gestartet: {} Thema(ta)", topics.size());
 
             int published = 0;
             for (String topic : topics) {
