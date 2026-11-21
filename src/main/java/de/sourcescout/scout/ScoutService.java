@@ -116,9 +116,19 @@ public class ScoutService {
                     log.info("{} Thema(ta) aus der Portal-API gezogen.", portalTopics.size());
                     return portalTopics;
                 }
-                log.info("Portal liefert kein Thema - verwende konfigurierte Themen.");
+                List<String> fallback = properties.getSearch().getFallbackTopics();
+                if (fallback != null && !fallback.isEmpty()) {
+                    log.info("Portal liefert kein Thema - verwende Fallback-Thema(ta): {}.", fallback);
+                    return fallback;
+                }
+                log.info("Portal liefert kein Thema und kein Fallback gesetzt - verwende konfigurierte Themen.");
             } catch (Exception ex) {
                 log.warn("Themen konnten nicht aus dem Portal geladen werden: {}", ex.getMessage());
+                List<String> fallback = properties.getSearch().getFallbackTopics();
+                if (fallback != null && !fallback.isEmpty()) {
+                    log.info("Verwende Fallback-Thema(ta): {}.", fallback);
+                    return fallback;
+                }
             }
         }
         return properties.getSearch().getTopics();

@@ -83,7 +83,8 @@ public class ScoutProperties {
     }
 
     public static class Search {
-        private List<String> topics = List.of("Beispielthema");
+        private List<String> topics = List.of("Klimawandel");
+        private List<String> fallbackTopics = List.of("Klimawandel");
         private List<String> providers = List.of("mistral", "gemini");
         private String strategy = "rotate";
         private int resultsPerProvider = 8;
@@ -95,6 +96,14 @@ public class ScoutProperties {
 
         public void setTopics(List<String> topics) {
             this.topics = topics;
+        }
+
+        public List<String> getFallbackTopics() {
+            return fallbackTopics;
+        }
+
+        public void setFallbackTopics(List<String> fallbackTopics) {
+            this.fallbackTopics = fallbackTopics;
         }
 
         public List<String> getProviders() {

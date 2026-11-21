@@ -10,11 +10,12 @@ scout:
     run-on-startup: true
   search:
     topics:
-      - "Beispielthema - hier eigene Suchthemen eintragen"
+      - "Klimawandel"
+    fallback-topics:
+      - "Klimawandel"
     providers:
       - mistral
       - gemini
-      - openai
     strategy: rotate
     results-per-provider: 8
     language: de
