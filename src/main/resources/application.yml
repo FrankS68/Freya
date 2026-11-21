@@ -15,7 +15,6 @@ scout:
       - "Klimawandel"
     providers:
       - mistral
-      - gemini
     strategy: rotate
     results-per-provider: 8
     language: de

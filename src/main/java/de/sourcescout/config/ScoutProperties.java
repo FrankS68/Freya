@@ -85,7 +85,7 @@ public class ScoutProperties {
     public static class Search {
         private List<String> topics = List.of("Klimawandel");
         private List<String> fallbackTopics = List.of("Klimawandel");
-        private List<String> providers = List.of("mistral", "gemini");
+        private List<String> providers = List.of("mistral");
         private String strategy = "rotate";
         private int resultsPerProvider = 8;
         private String language = "de";
